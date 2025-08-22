@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package payment;
+
+option go_package = "github.com/aymenmz/order-processing-system/pkg/pb/payment";
+
+enum PaymentStatus {
+  PAYMENT_STATUS_UNSPECIFIED = 0;
+  PAYMENT_STATUS_PENDING = 1;
+  PAYMENT_STATUS_SUCCESS = 2;
+  PAYMENT_STATUS_FAILED = 3;
+}
+
+message PaymentRequest {
+  string order_id = 1;
+  string customer_id = 2;
+  double amount = 3;
+  string currency = 4;
+  string payment_method = 5; // e.g., "credit_card", "paypal"
+}
+
+message PaymentResponse {
+  string payment_id = 1;
+  PaymentStatus status = 2;
+  string message = 3;
+  string transaction_id = 4;
+}
+
+service PaymentService {
+  rpc ProcessPayment(PaymentRequest) returns (PaymentResponse);
+}
+

@@ -1,0 +1,90 @@
+run:
+  timeout: 5m
+  issues-exit-code: 1
+  tests: true
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+  
+  govet:
+    check-shadowing: true
+  
+  gocyclo:
+    min-complexity: 15
+  
+  dupl:
+    threshold: 100
+  
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  
+  misspell:
+    locale: US
+  
+  lll:
+    line-length: 120
+  
+  goimports:
+    local-prefixes: github.com/your-org/order-processing-system
+  
+  gocritic:
+    enabled-tags:
+      - performance
+      - style
+      - experimental
+    disabled-checks:
+      - wrapperFunc
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+    - varcheck
+    - structcheck
+    - deadcode
+    - gocyclo
+    - gofmt
+    - goimports
+    - misspell
+    - lll
+    - goconst
+    - gocritic
+    - gci
+    - godox
+    - gofumpt
+    - revive
+  
+  disable:
+    - maligned
+    - prealloc
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+    
+    - path: pkg/pb/
+      linters:
+        - all
+  
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+

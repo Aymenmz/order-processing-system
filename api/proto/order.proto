@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package order;
+
+option go_package = "github.com/aymenmz/order-processing-system/pkg/pb/order";
+
+message Order {
+  string id = 1;
+  string customer_id = 2;
+  repeated OrderItem items = 3;
+  double total_amount = 4;
+  OrderStatus status = 5;
+  string created_at = 6;
+  string updated_at = 7;
+}
+
+message OrderItem {
+  string product_id = 1;
+  int32 quantity = 2;
+  double unit_price = 3;
+}
+
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;
+  ORDER_STATUS_PENDING = 1;
+  ORDER_STATUS_PROCESSING = 2;
+  ORDER_STATUS_COMPLETED = 3;
+  ORDER_STATUS_CANCELLED = 4;
+}
+
+message CreateOrderRequest {
+  string customer_id = 1;
+  repeated OrderItem items = 2;
+}
+
+message CreateOrderResponse {
+  Order order = 1;
+}
+
+message GetOrderRequest {
+  string order_id = 1;
+}
+
+message GetOrderResponse {
+  Order order = 1;
+}
+
+message UpdateOrderStatusRequest {
+  string order_id = 1;
+  OrderStatus new_status = 2;
+}
+
+message UpdateOrderStatusResponse {
+  Order order = 1;
+}
+
+service OrderService {
+  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+  rpc UpdateOrderStatus(UpdateOrderStatusRequest) returns (UpdateOrderStatusResponse);
+}
+

@@ -1,0 +1,168 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Install dependencies
+      run: go mod download
+
+    - name: Install protoc
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y protobuf-compiler
+        go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+        go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
+
+    - name: Generate protobuf code
+      run: |
+        export PATH=$PATH:$(go env GOPATH)/bin
+        ./scripts/generate-proto.sh
+        mv api/proto/*.pb.go api/proto/*_grpc.pb.go pkg/pb/order/ 2>/dev/null || true
+        mv api/proto/*.pb.go api/proto/*_grpc.pb.go pkg/pb/inventory/ 2>/dev/null || true
+        mv api/proto/*.pb.go api/proto/*_grpc.pb.go pkg/pb/payment/ 2>/dev/null || true
+
+    - name: Run tests
+      run: go test -v ./...
+
+    - name: Run linter
+      uses: golangci/golangci-lint-action@v3
+      with:
+        version: latest
+
+    - name: Build binaries
+      run: |
+        go build -o bin/order-service ./cmd/order-service/main_enhanced.go
+        go build -o bin/inventory-service ./cmd/inventory-service/main_enhanced.go
+        go build -o bin/payment-service ./cmd/payment-service/main_enhanced.go
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        service: [order-service, inventory-service, payment-service]
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.${{ matrix.service }}
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+
+    - name: Configure kubectl
+      run: |
+        # This would typically configure kubectl with your cluster credentials
+        # For example, using cloud provider CLI tools or kubeconfig
+        echo "Configure kubectl with your Kubernetes cluster credentials"
+        # kubectl config set-cluster ...
+        # kubectl config set-credentials ...
+        # kubectl config set-context ...
+
+    - name: Deploy to Kubernetes
+      run: |
+        # Apply namespace
+        kubectl apply -f deployments/kubernetes/namespace.yaml
+        
+        # Apply observability stack
+        kubectl apply -f deployments/kubernetes/observability-stack.yaml
+        
+        # Apply services
+        kubectl apply -f deployments/kubernetes/payment-service.yaml
+        kubectl apply -f deployments/kubernetes/inventory-service.yaml
+        kubectl apply -f deployments/kubernetes/order-service.yaml
+        
+        # Wait for deployments to be ready
+        kubectl rollout status deployment/payment-service -n order-processing
+        kubectl rollout status deployment/inventory-service -n order-processing
+        kubectl rollout status deployment/order-service -n order-processing
+        
+        # Verify deployment
+        kubectl get pods -n order-processing
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+

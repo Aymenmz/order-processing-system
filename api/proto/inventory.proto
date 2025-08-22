@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package inventory;
+
+option go_package = "github.com/aymenmz/order-processing-system/pkg/pb/inventory";
+
+message Product {
+  string id = 1;
+  string name = 2;
+  int32 stock_quantity = 3;
+  double price = 4;
+}
+
+message ReserveStockRequest {
+  string product_id = 1;
+  int32 quantity = 2;
+  string order_id = 3; // For tracking purposes
+}
+
+message ReserveStockResponse {
+  bool success = 1;
+  string message = 2;
+  int32 reserved_quantity = 3;
+}
+
+message ReleaseStockRequest {
+  string product_id = 1;
+  int32 quantity = 2;
+  string order_id = 3; // For tracking purposes
+}
+
+message ReleaseStockResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetProductStockRequest {
+  string product_id = 1;
+}
+
+message GetProductStockResponse {
+  Product product = 1;
+}
+
+service InventoryService {
+  rpc ReserveStock(ReserveStockRequest) returns (ReserveStockResponse);
+  rpc ReleaseStock(ReleaseStockRequest) returns (ReleaseStockResponse);
+  rpc GetProductStock(GetProductStockRequest) returns (GetProductStockResponse);
+}
+

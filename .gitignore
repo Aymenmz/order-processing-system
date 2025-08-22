@@ -1,0 +1,46 @@
+# Binaries
+/bin/
+/build/
+/dist/
+/out/
+
+# Compiled files
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go build cache & modules
+*.log
+*.prof
+*.tmp
+*.swp
+*.env
+*.local
+*.coverprofile
+*.sum
+/go.sum
+/go.work
+
+# Go modules (if you vendor them)
+vendor/
+
+# gRPC generated code
+*.pb.go
+*_grpc.pb.go
+
+# IDE settings
+.idea/
+.vscode/
+*.iml
+
+# OS / Editor junk
+.DS_Store
+Thumbs.db
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.env
+.LSOverride
