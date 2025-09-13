@@ -353,8 +353,3 @@ This project demonstrates advanced patterns and practices from the Go and Cloud 
 - [OpenTelemetry Go](https://github.com/open-telemetry/opentelemetry-go)
 - [Prometheus Go Client](https://github.com/prometheus/client_golang)
 - [Zap Logging](https://github.com/uber-go/zap)
-
----
-
-**Built with ❤️ by Manus AI for Cloud DevOps Engineers**
-
